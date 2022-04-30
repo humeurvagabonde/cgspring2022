@@ -9,34 +9,31 @@ class Player {
 
         // game loop
 
-        GamePlayer me;
+        GamePlayer me = null;
         GamePlayer ennemy;
 
         Pos basePos = new Pos(baseX, baseY);
 
-        Pos z1 = HeroModule.zone1(Pos.SCREEN_LEFT_UP);
-        Pos z2 = HeroModule.zone2(z1);
-        Pos z3 = HeroModule.zone3(z2);
+        Pos z1 = HeroModule.zoneDef1(Pos.SCREEN_LEFT_UP);
+        Pos z2 = HeroModule.zoneDef2(z1);
+        Pos z3 = HeroModule.zoneMiddle3();
 
-        z1 = z1.reverseWhenOnRight(basePos);
-        z2 = z2.reverseWhenOnRight(basePos);
-        z3 = z3.reverseWhenOnRight(basePos);
+        z1 = z1.reverseDefWhenOnRight(basePos);
+        z2 = z2.reverseDefWhenOnRight(basePos);
+        z3 = z3.reverseMiddleWhenOnRight(basePos);
 
-        Pos wind = new Pos(1, 1);
-        if (!basePos.isOnLeftSide()) {
-            wind = new Pos(-1, -1);
+        boolean isDebug = false;
+        if (isDebug) {
+            System.err.println("base " + basePos);
+
+            System.err.println("Z1 " + z1);
+            System.err.println("Z2 " + z2);
+            System.err.println("Z3 " + z3);
+
+            System.err.println("cZ1 " + HeroModule.center(z1));
+            System.err.println("cZ2 " + HeroModule.center(z2));
+            System.err.println("cZ3 " + HeroModule.center(z3));
         }
-
-        System.err.println("base " + basePos);
-
-        System.err.println("Z1 " + z1);
-        System.err.println("Z2 " + z2);
-        System.err.println("Z3 " + z3);
-
-        System.err.println("cZ1 " + HeroModule.center(z1));
-        System.err.println("cZ2 " + HeroModule.center(z2));
-        System.err.println("cZ3 " + HeroModule.center(z3));
-
 
         while (true) {
 
@@ -105,15 +102,15 @@ class Player {
             Map<Integer, Monster> monsterPerHero = new HashMap<>();
             Map<Integer, Pos> zonePerHero = new HashMap<>();
 
-            Monster mz1 = MonsterModule.chooseTarget(monsters, z1, basePos);
+            Monster mz1 = MonsterModule.chooseTargetOnDef(monsters, z1, basePos);
             monsterPerHero.put(myHeroes.get(0).id, mz1);
             zonePerHero.put(myHeroes.get(0).id, z1);
 
-            Monster mz2 = MonsterModule.chooseTarget(monsters, z2, basePos);
+            Monster mz2 = MonsterModule.chooseTargetOnDef(monsters, z2, basePos);
             monsterPerHero.put(myHeroes.get(1).id, mz2);
             zonePerHero.put(myHeroes.get(1).id, z2);
 
-            Monster mz3 = MonsterModule.chooseTarget(monsters, z3, basePos);
+            Monster mz3 = MonsterModule.chooseTargetOnMiddle(monsters, z3, basePos);
             monsterPerHero.put(myHeroes.get(2).id, mz3);
             zonePerHero.put(myHeroes.get(2).id, z3);
 
@@ -130,13 +127,36 @@ class Player {
                 if (currentTarget != null) {
                     System.err.println("CurrentTarget " + currentTarget.id);
                     Pos nextPos = currentTarget.nextPos();
-                    boolean useWindSpell = HeroModule.useWindSpell(basePos, currentHero.pos, currentTarget);
-                    if (useWindSpell) {
-                        Pos windVec = HeroModule.wind(currentHero.pos, wind);
-                        action = String.format("SPELL WIND %d %d WindSpell", windVec.x, windVec.y);
-                    } else {
-                        action = String.format("MOVE %d %d Chase", nextPos.x, nextPos.y);
+
+                    if (i == 0 || i == 1) {
+                        Pos wind = new Pos(1, 1);
+                        if (!basePos.isOnLeftSide()) {
+                            wind = new Pos(-1, -1);
+                        }
+                        boolean useWindSpell = HeroModule.useWindSpellOnDef(basePos, me, currentHero.pos, currentTarget);
+                        if (useWindSpell) {
+                            Pos windVec = HeroModule.wind(currentHero.pos, wind);
+                            action = String.format("SPELL WIND %d %d WindSpell", windVec.x, windVec.y);
+                        } else {
+                            action = String.format("MOVE %d %d Chase", nextPos.x, nextPos.y);
+                        }
                     }
+
+                    if (i == 2) {
+                        Pos wind = new Pos(1, 0);
+                        if (!basePos.isOnLeftSide()) {
+                            wind = new Pos(-1, 0);
+                        }
+                        boolean useWindSpell = HeroModule.useWindSpellOnMiddle(z3, me, currentHero.pos, currentTarget);
+                        if (useWindSpell) {
+                            Pos windVec = HeroModule.wind(currentHero.pos, wind);
+                            action = String.format("SPELL WIND %d %d WindSpell", windVec.x, windVec.y);
+                        } else {
+                            action = String.format("MOVE %d %d Chase", nextPos.x, nextPos.y);
+                        }
+                    }
+
+
                 } else {
                     Pos zone = zonePerHero.get(currentHero.id);
                     Pos center = HeroModule.center(zone);
@@ -175,18 +195,18 @@ class Player {
             return r;
         }
 
-        public static Pos zone1(Pos basePos) {
-            int baseX1 = minX(basePos);
-            int baseY1 = Math.max(0, basePos.y - Pos.ZONE_HEIGHT);
-            return new Pos(baseX1, baseY1);
+        public static Pos zoneDef1(Pos basePos) {
+            return new Pos(20, 50);
         }
 
-        public static Pos zone2(Pos z1) {
-            return new Pos(z1.x, Math.min(9000, z1.y + Pos.ZONE_HEIGHT));
+        public static Pos zoneDef2(Pos z1) {
+            return new Pos(20, z1.y + Pos.ZONE_HEIGHT);
         }
 
-        public static Pos zone3(Pos z2) {
-            return new Pos(z2.x, Math.min(9000, z2.y + Pos.ZONE_HEIGHT));
+        public static Pos zoneMiddle3() {
+            int middleX = (Pos.SCREEN_RIGHT_BOTTOM.x / 2) - 3000;
+            int middleY = (Pos.SCREEN_RIGHT_BOTTOM.y / 2) - Pos.ZONE_HEIGHT;
+            return new Pos(middleX, middleY);
         }
 
         public static Pos center(Pos pos) {
@@ -205,8 +225,22 @@ class Player {
             return new Pos(x, y);
         }
 
-        static boolean useWindSpell(Pos base, Pos hero, Monster monster) {
-            if (MonsterModule.threatLevelByDistance(base, monster.pos) >= 1.0d) {
+        static boolean useWindSpellOnDef(Pos base, GamePlayer me, Pos heroPos, Monster monster) {
+            int mana = me != null ? me.mana : 0;
+            if (mana >= 20 && MonsterModule.threatLevelByDistance(base, monster.pos) >= 1.25d) {
+                return true;
+            } else if (mana > 100) {
+                return true;
+            }
+            return false;
+        }
+
+        static boolean useWindSpellOnMiddle(Pos z3, GamePlayer me, Pos heroPos, Monster monster) {
+            int mana = me != null ? me.mana : 0;
+            Pos z3Center = HeroModule.center(z3);
+            if (mana >= 40 && MonsterModule.threatLevelByDistance(z3Center, monster.pos) >= 2.0d) {
+                return true;
+            } else if (mana > 100) {
                 return true;
             }
             return false;
@@ -215,13 +249,13 @@ class Player {
 
     static class MonsterModule {
 
-        public static Monster chooseTarget(List<Monster> monsters, Pos zone, Pos base) {
+        public static Monster chooseTargetOnDef(List<Monster> monsters, Pos zone, Pos base) {
             Monster target = monsters.stream()
                     .filter(HeroModule::isMonsterThreatenBase)
                     .filter(m -> HeroModule.isMonsterInZone(zone, m.pos))
                     .map(m -> {
                         //System.err.println("Threat detected");
-                        return new ThreatMonster(MonsterModule.threatLevel(base, m), m);
+                        return new ThreatMonster(MonsterModule.threatLevelOnDef(base, m), m);
                     })
                     .max(Comparator.comparing(tm -> tm.threadLevel))
                     .map(tm -> {
@@ -236,9 +270,27 @@ class Player {
             return target;
         }
 
-        static double threatLevel(Pos basePos, Monster m) {
+        public static Monster chooseTargetOnMiddle(List<Monster> monsters, Pos zone, Pos base) {
+            Monster target = monsters.stream()
+                    //.filter(HeroModule::isMonsterThreatenBase)
+                    .filter(m -> HeroModule.isMonsterInZone(zone, m.pos))
+                    .map(m -> new ThreatMonster(MonsterModule.threatLevelOnMiddle(base, m), m))
+                    .max(Comparator.comparing(tm -> tm.threadLevel))
+                    .map(tm -> tm.monster)
+                    .orElse(null);
+            return target;
+        }
+
+        static double threatLevelOnDef(Pos basePos, Monster m) {
             double dist = threatLevelByDistance(basePos, m.pos);
             double proximity = m.threatFor.equals(ThreatFor.MINE) ? 50 : 0;
+            return dist + proximity;
+        }
+
+        static double threatLevelOnMiddle(Pos z3, Monster m) {
+            double dist = threatLevelByDistance(z3, m.pos);
+            //double proximity = m.threatFor.equals(ThreatFor.MINE) ? 50 : 0d;
+            double proximity = 0d;
             return dist + proximity;
         }
 
@@ -303,8 +355,9 @@ class Player {
     static class Pos {
 
         public static int GAP = 10;
+        public static int COVERED = 1600;
         public static int ZONE_WIDTH = 6000;
-        public static int ZONE_HEIGHT = 2500;
+        public static int ZONE_HEIGHT = 2550;
 
         public static Pos SCREEN_LEFT_UP = new Pos(0, 0);
         public static Pos SCREEN_RIGHT_BOTTOM = new Pos(17630, 9000);
@@ -330,14 +383,23 @@ class Player {
         }
 
         int reverseY() {
-            return y + ZONE_HEIGHT;
+            return y + 4000;
         }
 
-        public Pos reverseWhenOnRight(Pos base) {
+        public Pos reverseDefWhenOnRight(Pos base) {
             if (base.isOnLeftSide()) {
                 return this;
             }
             return new Pos(this.reverseX(), this.reverseY());
+        }
+
+        public Pos reverseMiddleWhenOnRight(Pos base) {
+            if (base.isOnLeftSide()) {
+                return this;
+            }
+            int x = SCREEN_RIGHT_BOTTOM.x / 2 - 2300;
+            int y = SCREEN_RIGHT_BOTTOM.y / 2 - 1000;
+            return new Pos(x, y);
         }
 
         @Override
